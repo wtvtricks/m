@@ -1,0 +1,124 @@
+<html><head><script type="text/javascript" src="../../../bundle-playback.js" charset="utf-8"></script>
+<script type="text/javascript" src="../../wombat.js" charset="utf-8"></script>
+<script>window.RufflePlayer=window.RufflePlayer||{};window.RufflePlayer.config={"autoplay":"on","unmuteOverlay":"hidden"};</script>
+<script type="text/javascript" src="../../ruffle.js"></script>
+<script type="text/javascript">
+  __wm.init("https://web.archive.org/web");
+  __wm.wombat("http://consolevision.com:80/members/mterlouw/trickwin.htm","20040810132320","https://web.archive.org/","web","https://web-static.archive.org/_static/",
+	      "1092144200");
+</script>
+<link rel="stylesheet" type="text/css" href="../../../banner-styles.css">
+<link rel="stylesheet" type="text/css" href="../../../iconochive.css">
+<!-- End Wayback Rewrite JS Include -->
+
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<title>Tricking Windows into Answering the Line</title>
+<meta name="GENERATOR" content="Microsoft FrontPage 5.0">
+<meta name="ProgId" content="FrontPage.Editor.Document">
+<meta name="Microsoft Theme" content="none, default">
+<meta name="Microsoft Border" content="none, default">
+</head>
+
+<body bgcolor="#C1C2FF" vlink="#0000FF" link="#0000FF" alink="#0000FF">
+
+<p align="center"><font size="5">Tricking Windows 
+    into Answering the Line</font></p>
+<p align="left">&nbsp;&nbsp;&nbsp;  If we're going to get a 
+Dreamcast Server running under Windows 2000/XP, the first thing we need to do is 
+get Windows to do something it's not designed to do: answer the phone line 
+without it actually ringing. In Windows 9x, this is easy, although it involves a 
+little snooping around in the registry. Well this version of Windows is a bit 
+stubborn (read: a pain in the ass), so we'll be going through a few more hoops 
+to get the operating system to behave nicely and play along with us.</p>
+<p align="left">&nbsp;&nbsp;&nbsp; The method used here to trick Windows is not 
+necessarily elegant, and it definitely won't work for everybody. If this doesn't 
+work for you, either because you don't have the correct type of modem or can't 
+find the registry keys, please don't bother me with questions. Do some work on 
+your own and try to figure it out. I can't and won't troubleshoot every modem 
+out there or every hardware configuration that doesn't work with this method. If 
+you do arrive at a different solution to establishing the initial connection, I 
+would like to hear about it. I don't really like the one I'm about to describe 
+(because it won't work for everyone and it's a bit of a kludge), and the more 
+solutions I can post up here the more people can use the PC-DC Server.</p>
+<p align="left">If you don't have a voice-capable modem, this won't work for 
+you.</p>
+<p align="left">&nbsp;&nbsp;&nbsp; Ok, let's get started. In 
+order to get Windows to pick up the phone on demand, we have to hook into the 
+commands sent to the modem when Windows enters it's listening (or monitoring) 
+phase. So go ahead and open up the Registry Editor and see if you can find the 
+Monitor key. Mine is at HKEY_LOCAL_MACHINE\System\CurrentControlSet\Control\Class\{<i>bunch 
+of numbers</i>}\0000\Monitor. If you can't find it, get up to the Class key, and 
+perform a search for <b>Monitor</b> from there. You may have more than one, 
+depending on what hardware you have installed (multiple modems, etc.). It's up 
+to you to figure out which one it is. Once you find it, change the first string 
+(usually ATS0=0&lt;cr&gt;) to AT+FCLASS=8&lt;cr&gt;. Then change the second string (usually 
+None) to ATH1+VSD=128,1. If the second string isn't there just add it in. When 
+you're done you should look like this:</p>
+<p align="center"><img border="0" src="trickwin_data/Monitor.gif" width="694" height="355"></p>
+<p align="left">&nbsp;&nbsp;&nbsp; OK, so what have we done here you say? The 
+first string we changed switches the modem into voice mode. This is the reason 
+you need a voice modem to do this, and we will soon see why this is necessary. 
+The next string instructs the modem to do two things. The "H1" tells it to go 
+off hook, and the "+VSD=128,1" sets the silence detection timer interval. The 
+silence detection thing is not necessary; it's just in there to speed things up. 
+If it causes you problems you can just change the string to ATH1&lt;cr&gt;.</p>
+<p align="left">&nbsp;&nbsp;&nbsp; Now what will happen if you enable the Remote 
+Access Server, is Windows will switch the modem into voice mode and take it off 
+hook. When this happens the modem will begin sending data back to indicate 
+silence on the line. We are going to convince Windows that those silence data 
+characters is actually the phone ringing (which of course is not true), but 
+first click up a couple folders to the Answer key. Before the modem can answer 
+this "fake call", we'll have to take it out of voice mode and back to data mode, 
+and put it back on hook. Do this by changing the first string in the Answer key 
+(usually ATA&lt;cr&gt;) to ATH&lt;cr&gt;. Now make a second sting if there's not one there 
+already and set it to ATA&lt;cr&gt;. You should look like this:</p>
+<p align="center"><img border="0" src="trickwin_data/Answer.gif" width="707" height="355"></p>
+<p align="left">&nbsp;&nbsp;&nbsp; The last registry change requires a little 
+more searching. We're looking for a list of modem responses so we can add our 
+fake Ring response. If you're modem uses the Unimodem driver (most do) then you 
+might be able to find it at HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Unimodem\DeviceSpecific\<i>ModemName</i>\Responses. 
+If not search for something like "Responses" or "NO CARRIER". Once you find it 
+you can add a binary value. Name it "&lt;h10&gt;s", and set it to 08 00 00 00 00 00 00 
+00 00 00 (that's ten bytes, total). If all goes well it should look like this:</p>
+<p align="center"><img border="0" src="trickwin_data/Responses.gif" width="639" height="355"></p>
+<p align="left">&nbsp;&nbsp;&nbsp; The "&lt;h10&gt;s" stands for two bytes: 0x10 and 
+the letter 's'. This is the string my modem sends when it detects silence on the 
+line. If you try to connect and you don't hear your PC's modem screeching, then 
+you may have to check your modem logs to see if the modem is sending something 
+different. Make the necessary changes and try again.</p>
+<p align="left"><b>You will have to reboot for these changes to take effect, and 
+if you have to make any adjustments to the registry later on, 
+you will have to reboot to see the changes.</b></p>
+<p align="left"><b>&nbsp;&nbsp;&nbsp; </b>Now you should be able to establish a 
+connection with your Dreamcast.</p>
+<p align="left">&nbsp;</p>
+<p align="left">&nbsp;</p>
+<p align="left">&nbsp;</p>
+<p align="left">&nbsp;</p>
+<p align="left">&nbsp;</p>
+<p align="left">&nbsp;</p>
+
+
+
+
+</body></html>
+<!--
+     FILE ARCHIVED ON 13:23:20 Aug 10, 2004 AND RETRIEVED FROM THE
+     INTERNET ARCHIVE ON 22:03:17 Apr 26, 2024.
+     JAVASCRIPT APPENDED BY WAYBACK MACHINE, COPYRIGHT INTERNET ARCHIVE.
+
+     ALL OTHER CONTENT MAY ALSO BE PROTECTED BY COPYRIGHT (17 U.S.C.
+     SECTION 108(a)(3)).
+-->
+<!--
+playback timings (ms):
+  captures_list: 0.954
+  exclusion.robots: 0.105
+  exclusion.robots.policy: 0.092
+  cdx.remote: 0.073
+  esindex: 0.01
+  LoadShardBlock: 817.86 (3)
+  PetaboxLoader3.datanode: 710.133 (4)
+  PetaboxLoader3.resolve: 303.123 (2)
+  load_resource: 266.945
+-->
